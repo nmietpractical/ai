@@ -1,0 +1,1010 @@
+------------------------practical 1 --A* Search for 8-Puzzle------
+
+import heapq
+
+
+# Calculate Manhattan Distance
+def heuristic(state, goal):
+    distance = 0
+
+    for i in range(9):
+        tile = state[i]
+
+        if tile != 0:
+            current_row, current_col = divmod(i, 3)
+
+            goal_index = goal.index(tile)
+            goal_row, goal_col = divmod(goal_index, 3)
+
+            distance += abs(current_row - goal_row)
+            distance += abs(current_col - goal_col)
+
+    return distance
+
+
+# Generate possible next states
+def get_neighbors(state):
+    neighbors = []
+
+    zero = state.index(0)
+    row, col = divmod(zero, 3)
+
+    moves = [
+        (-1, 0),  # Up
+        (1, 0),   # Down
+        (0, -1),  # Left
+        (0, 1)    # Right
+    ]
+
+    for dr, dc in moves:
+        new_row = row + dr
+        new_col = col + dc
+
+        if 0 <= new_row < 3 and 0 <= new_col < 3:
+
+            new_index = new_row * 3 + new_col
+
+            new_state = list(state)
+
+            new_state[zero], new_state[new_index] = (
+                new_state[new_index], new_state[zero]
+            )
+
+            neighbors.append(tuple(new_state))
+
+    return neighbors
+
+
+# A* Search Algorithm
+def astar(start, goal):
+
+    open_list = []
+
+    heapq.heappush(
+        open_list,
+        (heuristic(start, goal), 0, start)
+    )
+
+    closed = set()
+
+    g_score = {start: 0}
+    parent = {start: None}
+
+    while open_list:
+
+        f, g, current = heapq.heappop(open_list)
+
+        if current in closed:
+            continue
+
+        # Check goal state
+        if current == goal:
+
+            path = []
+            node = current
+
+            while node is not None:
+                path.append(node)
+                node = parent[node]
+
+            return path[::-1]
+
+        closed.add(current)
+
+        # Explore neighboring states
+        for neighbor in get_neighbors(current):
+
+            if neighbor in closed:
+                continue
+
+            new_g = g + 1
+
+            if new_g < g_score.get(neighbor, float('inf')):
+
+                g_score[neighbor] = new_g
+                parent[neighbor] = current
+
+                new_f = new_g + heuristic(neighbor, goal)
+
+                heapq.heappush(
+                    open_list,
+                    (new_f, new_g, neighbor)
+                )
+
+    return None
+
+
+# Main Program
+print("\n===== 8-PUZZLE PROBLEM =====")
+
+print("\nINPUT INSTRUCTIONS:")
+print("1. Enter exactly 9 digits.")
+print("2. Use digits 0, 1, 2, 3, 4, 5, 6, 7, 8 exactly once.")
+print("3. 0 represents the blank space.")
+print("4. Do not use digit 9, spaces or commas.")
+
+print("\nExample:")
+print("Initial State: 123406758")
+print("Goal State:    123456780")
+
+
+# Take input from user
+start_input = input("\nEnter initial state: ").strip()
+goal_input = input("Enter goal state: ").strip()
+
+
+# Validate input
+if (len(start_input) == 9 and len(goal_input) == 9
+        and start_input.isdigit() and goal_input.isdigit()):
+
+    start = tuple(int(x) for x in start_input)
+    goal = tuple(int(x) for x in goal_input)
+
+    if (set(start) == set(range(9))
+            and set(goal) == set(range(9))):
+
+        # Find solution
+        solution = astar(start, goal)
+
+        if solution:
+
+            print("\nSolution found!")
+            print("Total moves:", len(solution) - 1)
+
+            # Display solution path
+            for step, state in enumerate(solution):
+
+                print("\nStep", step)
+
+                for i in range(0, 9, 3):
+                    print(state[i:i+3])
+
+        else:
+            print("\nNo solution found.")
+
+    else:
+        print("\nInvalid input!")
+        print("Use digits 0 to 8 exactly once in both states.")
+
+else:
+    print("\nInvalid input!")
+    print("Both states must contain exactly 9 digits.")
+
+
+------------------Practical 2 TOwer of Hanoi-------------------
+
+
+from collections import deque
+
+# Generate all legal next states
+def get_neighbors(state):
+
+    neighbors = []
+
+    for i in range(3):
+
+        # Check whether source peg is empty
+        if not state[i]:
+            continue
+
+        for j in range(3):
+
+            if i == j:
+                continue
+
+            # Copy the current state
+            new_state = [list(peg) for peg in state]
+
+            # Take the top disk from source peg
+            disk = new_state[i].pop()
+
+            # Move only if destination is empty
+            # or its top disk is larger
+            if not new_state[j] or new_state[j][-1] > disk:
+
+                new_state[j].append(disk)
+
+                next_state = tuple(
+                    tuple(peg) for peg in new_state
+                )
+
+                move = f"Move disk {disk} from {chr(65+i)} to {chr(65+j)}"
+
+                neighbors.append((next_state, move))
+
+    return neighbors
+
+
+# BFS State Space Search
+def tower_of_hanoi(n):
+
+    # Initial and goal states
+    start = (tuple(range(n, 0, -1)), (), ())
+    goal = ((), (), tuple(range(n, 0, -1)))
+
+    # Initialize queue and visited set
+    queue = deque([start])
+    visited = {start}
+
+    # Store parent and move information
+    parent = {start: None}
+
+    while queue:
+
+        current = queue.popleft()
+
+        # Check whether goal is reached
+        if current == goal:
+
+            path = []
+            state = goal
+
+            # Reconstruct the solution path
+            while parent[state] is not None:
+
+                previous, move = parent[state]
+
+                path.append((move, state))
+                state = previous
+
+            path.reverse()
+            return start, path
+
+        # Generate legal successor states
+        for next_state, move in get_neighbors(current):
+
+            if next_state not in visited:
+
+                visited.add(next_state)
+                parent[next_state] = (current, move)
+
+                queue.append(next_state)
+
+    return start, None
+
+
+# Display the state of all three pegs
+def display_state(state):
+
+    print("Peg A:", state[0])
+    print("Peg B:", state[1])
+    print("Peg C:", state[2])
+
+
+# Main program
+n = int(input("Enter number of disks: "))
+
+if n < 1 or n > 5:
+
+    print("Please enter between 1 and 5 disks.")
+
+else:
+
+    start, solution = tower_of_hanoi(n)
+
+    print("\nInitial State:")
+    display_state(start)
+
+    if solution is not None:
+
+        print("\nSolution Found!")
+        print("Total moves:", len(solution))
+
+        for step, (move, state) in enumerate(solution, 1):
+
+            print("\nStep", step)
+            print(move)
+            display_state(state)
+
+    else:
+        print("No solution found.")
+
+
+
+-------------------Practical 3: BFS for Robot Path Planning ----------
+
+# BFS for Robot Path Planning
+
+grid = [
+    [0, 0, 0, 1, 0],
+    [1, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0],
+    [0, 1, 1, 1, 0],
+    [0, 0, 0, 0, 0]
+]
+
+start = (0, 0)
+goal = (4, 4)
+
+queue = [start]
+visited = [start]
+parent = {}
+
+moves = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+
+found = False
+
+while queue:
+    current = queue.pop(0)
+
+    if current == goal:
+        found = True
+        break
+
+    for move in moves:
+        row = current[0] + move[0]
+        col = current[1] + move[1]
+
+        if (row >= 0 and row < 5 and col >= 0 and col < 5
+                and grid[row][col] == 0
+                and (row, col) not in visited):
+
+            next_position = (row, col)
+
+            queue.append(next_position)
+            visited.append(next_position)
+            parent[next_position] = current
+
+if found:
+    path = []
+    position = goal
+
+    while position != start:
+        path.append(position)
+        position = parent[position]
+
+    path.append(start)
+    path.reverse()
+
+    print("Path Found!")
+    print("Robot Path:", path)
+    print("Total Steps:", len(path) - 1)
+
+    for position in path:
+        row = position[0]
+        col = position[1]
+        grid[row][col] = 2
+
+    print("\nGrid:")
+    for row in grid:
+        for cell in row:
+            if cell == 1:
+                print("#", end=" ")
+            elif cell == 2:
+                print("*", end=" ")
+            else:
+                print(".", end=" ")
+        print()
+
+    print("\nGrid Symbols:")
+    print("* = Robot Path (including Start and Goal)")
+    print("# = Obstacle")
+    print(". = Empty Cell")
+
+else:
+    print("No Path Found!")
+
+
+--------------- Practical 4: DFS for Water Jug Problem-------------------
+
+
+# DFS for Water Jug Problem
+
+jug1 = 4
+jug2 = 3
+
+start = (0, 0)
+goal = 2
+
+stack = [(start, [start])]
+visited = [start]
+
+solution = None
+
+while stack:
+    state, path = stack.pop()
+
+    a = state[0]
+    b = state[1]
+
+    # Check goal condition
+    if a == goal or b == goal:
+        solution = path
+        break
+
+    next_states = []
+
+    # Fill jug 1
+    next_states.append((jug1, b))
+
+    # Fill jug 2
+    next_states.append((a, jug2))
+
+    # Empty jug 1
+    next_states.append((0, b))
+
+    # Empty jug 2
+    next_states.append((a, 0))
+
+    # Pour water from jug 1 to jug 2
+    transfer = min(a, jug2 - b)
+    next_states.append((a - transfer, b + transfer))
+
+    # Pour water from jug 2 to jug 1
+    transfer = min(b, jug1 - a)
+    next_states.append((a + transfer, b - transfer))
+
+    for next_state in next_states:
+        if next_state != state and next_state not in visited:
+            visited.append(next_state)
+            stack.append((next_state, path + [next_state]))
+
+print("Water Jug Capacities: 4L and 3L")
+print("Goal: Obtain exactly 2 litres")
+
+if solution:
+    print("\nSolution Found!")
+
+    for i in range(len(solution)):
+        print("Step", i, ":", solution[i])
+
+    print("\nTotal Steps:", len(solution) - 1)
+
+    print("\nState Meaning:")
+    print("(x, y) = (Water in 4L Jug, Water in 3L Jug)")
+
+else:
+    print("No solution found!")
+
+
+
+------------------------Practical 5: Adversarial Search with Alpha-Beta Pruning------------------------
+
+# Alpha-Beta Pruning
+
+def minimax(d,i,maxp,a,b,v):
+    if d == 3:
+        return v[i]
+
+    if maxp:
+        best = -999
+        for j in range(2):
+            best = max(best,minimax(d+1,i*2+j,False,a,b,v))
+            a = max(a,best)
+            if b <= a: break
+        return best
+    else:
+        best = 999
+        for j in range(2):
+            best = min(best,minimax(d+1,i*2+j,True,a,b,v))
+            b = min(b,best)
+            if b <= a: break
+        return best
+
+v = list(map(int,input("Enter 8 values: ").split()))
+print("Best value:",minimax(0,0,True,-999,999,v))
+
+
+Sample Input:
+
+```
+Enter 8 values: 3 5 6 9 1 2 0 -1
+```
+
+Expected Output:
+
+```
+Best value: 5
+
+
+-------------------------Practical 6: Sudoku Solver Using Backtracking--------------------
+
+
+# Sudoku Solver using Backtracking
+
+grid = [
+    [5, 3, 0, 0, 7, 0, 0, 0, 0],
+    [6, 0, 0, 1, 9, 5, 0, 0, 0],
+    [0, 9, 8, 0, 0, 0, 0, 6, 0],
+    [8, 0, 0, 0, 6, 0, 0, 0, 3],
+    [4, 0, 0, 8, 0, 3, 0, 0, 1],
+    [7, 0, 0, 0, 2, 0, 0, 0, 6],
+    [0, 6, 0, 0, 0, 0, 2, 8, 0],
+    [0, 0, 0, 4, 1, 9, 0, 0, 5],
+    [0, 0, 0, 0, 8, 0, 0, 7, 9]
+]
+
+
+# Find possible numbers for an empty cell
+def get_candidates(row, col):
+    candidates = []
+
+    for num in range(1, 10):
+        safe = True
+
+        # Check row
+        for i in range(9):
+            if grid[row][i] == num:
+                safe = False
+
+        # Check column
+        for i in range(9):
+            if grid[i][col] == num:
+                safe = False
+
+        # Check 3x3 box
+        start_row = (row // 3) * 3
+        start_col = (col // 3) * 3
+
+        for i in range(start_row, start_row + 3):
+            for j in range(start_col, start_col + 3):
+                if grid[i][j] == num:
+                    safe = False
+
+        if safe:
+            candidates.append(num)
+
+    return candidates
+
+
+# Find empty cell with minimum candidates
+def find_empty():
+    best_cell = None
+    best_candidates = []
+
+    for i in range(9):
+        for j in range(9):
+            if grid[i][j] == 0:
+                candidates = get_candidates(i, j)
+
+                if best_cell is None or len(candidates) < len(best_candidates):
+                    best_cell = (i, j)
+                    best_candidates = candidates
+
+    return best_cell, best_candidates
+
+
+# Solve Sudoku using backtracking
+def solve():
+    cell, candidates = find_empty()
+
+    if cell is None:
+        return True
+
+    row, col = cell
+
+    for num in candidates:
+        grid[row][col] = num
+
+        if solve():
+            return True
+
+        # Backtrack
+        grid[row][col] = 0
+
+    return False
+
+
+# Display the Sudoku grid
+print("Original Sudoku:")
+
+for row in grid:
+    print(row)
+
+if solve():
+    print("\nSolved Sudoku:")
+
+    for row in grid:
+        print(row)
+else:
+    print("No solution exists!")
+
+
+-----------------------Practical 7: Backtracking Search for 8-Queens CSP---------------------
+
+
+# 8-Queens Problem using Backtracking
+
+def is_safe(board, row, col):
+
+    for prev_row in range(row):
+        prev_col = board[prev_row]
+
+        # Check same column
+        if prev_col == col:
+            return False
+
+        # Check diagonal
+        if abs(prev_col - col) == abs(prev_row - row):
+            return False
+
+    return True
+
+
+def solve(board, row):
+
+    # All 8 queens are placed
+    if row == 8:
+        return True
+
+    # Try each column
+    for col in range(8):
+
+        if is_safe(board, row, col):
+            board[row] = col
+
+            if solve(board, row + 1):
+                return True
+
+            # Backtrack
+            board[row] = -1
+
+    return False
+
+
+# Create an empty board
+board = [-1] * 8
+
+if solve(board, 0):
+    print("One 8-Queens Solution:\n")
+
+    for row in range(8):
+        print(". " * board[row] + "Q " + ". " * (7 - board[row]))
+
+else:
+    print("No solution found!")
+
+
+-------------------------Practical 8: Rule-Based Chatbot Using Pattern Matching------------
+
+
+
+# Rule-Based Chatbot using Pattern Matching
+
+import re
+
+print("Chatbot: Hello! I am a simple AI chatbot.")
+print("Chatbot: Type 'bye' to exit.")
+
+while True:
+
+    user = input("You: ").lower()
+
+    if user in ["bye", "exit", "quit"]:
+        print("Chatbot: Goodbye! Have a nice day.")
+        break
+
+    elif re.search("hello|hi|hey", user):
+        print("Chatbot: Hello! How can I help you?")
+
+    elif re.search("your name|who are you", user):
+        print("Chatbot: I am a rule-based chatbot.")
+
+    elif re.search("how are you", user):
+        print("Chatbot: I am fine. How are you?")
+
+    elif re.search("what is ai|artificial intelligence", user):
+        print("Chatbot: AI is the simulation of human intelligence by machines.")
+
+    elif re.search("machine learning|ml", user):
+        print("Chatbot: Machine Learning is a branch of AI.")
+
+    elif re.search("thank", user):
+        print("Chatbot: You are welcome!")
+
+    else:
+        print("Chatbot: Sorry, I don't understand that.")
+
+
+
+--------------------------------Practical 9: Intelligent Number Guessing Agent---------------------------
+
+
+# Intelligent Number Guessing Agent
+
+low = 1
+high = 100
+
+print("Think of a number between 1 and 100.")
+print("I will try to guess your number.")
+
+while low <= high:
+
+    guess = (low + high) // 2
+
+    print("\nMy guess is:", guess)
+
+    print("Enter:")
+    print("H - Your number is higher")
+    print("L - Your number is lower")
+    print("C - Correct guess")
+
+    answer = input("Your response: ").lower()
+
+    if answer == "h":
+        low = guess + 1
+
+    elif answer == "l":
+        high = guess - 1
+
+    elif answer == "c":
+        print("\nI guessed your number!")
+        break
+
+    else:
+        print("Invalid input. Enter H, L or C.")
+
+else:
+    print("Your answers were inconsistent!")
+
+
+--------------------------Practical 10: Goal Stack Planning for Blocks World----------------------
+
+
+
+# Interactive Blocks World Planner
+
+from collections import deque
+
+blocks = ["A", "B", "C"]
+
+
+def get_state(message):
+    print(message)
+    print("Enter blocks on 3 pegs (bottom to top).")
+    print("Use | between pegs and - for an empty peg.")
+
+    while True:
+        data = input("Enter arrangement: ").upper()
+        parts = data.split("|")
+
+        if len(parts) != 3:
+            print("Please enter exactly 3 pegs.")
+            continue
+
+        state = []
+
+        for peg in parts:
+            if peg == "-":
+                state.append(())
+            else:
+                state.append(tuple(peg))
+
+        all_blocks = []
+
+        for peg in state:
+            all_blocks.extend(peg)
+
+        if sorted(all_blocks) == sorted(blocks):
+            return tuple(state)
+
+        print("Invalid arrangement!")
+        print("Use A, B and C exactly once.")
+
+
+def get_moves(state):
+    moves = []
+
+    for i in range(3):
+        if len(state[i]) == 0:
+            continue
+
+        block = state[i][-1]
+
+        for j in range(3):
+            if i == j:
+                continue
+
+            new_state = [list(peg) for peg in state]
+
+            new_state[i].pop()
+            new_state[j].append(block)
+
+            new_state = tuple(tuple(peg) for peg in new_state)
+
+            move = "Move " + block + " from Peg " + str(i + 1)
+            move += " to Peg " + str(j + 1)
+
+            moves.append((new_state, move))
+
+    return moves
+
+
+def find_plan(start, goal):
+    queue = deque([start])
+    visited = [start]
+    parent = {start: None}
+    action = {}
+
+    while queue:
+        current = queue.popleft()
+
+        if current == goal:
+            plan = []
+            state = goal
+
+            while parent[state] is not None:
+                plan.append((action[state], state))
+                state = parent[state]
+
+            plan.reverse()
+            return plan
+
+        for next_state, move in get_moves(current):
+            if next_state not in visited:
+                visited.append(next_state)
+                parent[next_state] = current
+                action[next_state] = move
+                queue.append(next_state)
+
+    return None
+
+
+def display_state(state):
+    for i in range(3):
+        print("Peg", i + 1, ":", list(state[i]))
+
+
+initial = get_state("\nEnter Initial State:")
+goal = get_state("\nEnter Goal State:")
+
+print("\nInitial Arrangement:")
+display_state(initial)
+
+print("\nGoal Arrangement:")
+display_state(goal)
+
+plan = find_plan(initial, goal)
+
+if plan is not None:
+    print("\nPlan Found!")
+
+    if len(plan) == 0:
+        print("Initial state is already the goal state.")
+
+    for i, (move, state) in enumerate(plan, 1):
+        print("\nStep", i, ":", move)
+        display_state(state)
+
+    print("\nGoal Achieved!")
+    print("Total Moves:", len(plan))
+
+else:
+    print("No valid plan found.")
+
+
+--------------------Practical 11: Game-Playing Agent Using Minimax Algorithm---------------
+
+
+
+# Tic-Tac-Toe using Minimax Algorithm
+
+WIN_LINES = [
+    (0, 1, 2), (3, 4, 5), (6, 7, 8),
+    (0, 3, 6), (1, 4, 7), (2, 5, 8),
+    (0, 4, 8), (2, 4, 6)
+]
+
+
+def display_board(board):
+    print()
+    for i in range(0, 9, 3):
+        print(board[i], "|", board[i+1], "|", board[i+2])
+        if i < 6:
+            print("---------")
+    print()
+
+
+def winner(board):
+    for a, b, c in WIN_LINES:
+        if board[a] == board[b] == board[c] and board[a] != " ":
+            return board[a]
+
+    if " " not in board:
+        return "draw"
+
+    return None
+
+
+def minimax(board, maximizing):
+
+    result = winner(board)
+
+    if result == "O":
+        return 1
+
+    if result == "X":
+        return -1
+
+    if result == "draw":
+        return 0
+
+    scores = []
+
+    for i in range(9):
+        if board[i] == " ":
+
+            if maximizing:
+                board[i] = "O"
+            else:
+                board[i] = "X"
+
+            score = minimax(board, not maximizing)
+            scores.append(score)
+
+            board[i] = " "
+
+    if maximizing:
+        return max(scores)
+    else:
+        return min(scores)
+
+
+def best_move(board):
+    best_score = -2
+    move = None
+
+    for i in range(9):
+        if board[i] == " ":
+            board[i] = "O"
+
+            score = minimax(board, False)
+
+            board[i] = " "
+
+            if score > best_score:
+                best_score = score
+                move = i
+
+    return move
+
+
+board = [" "] * 9
+
+print("TIC-TAC-TOE")
+print("You are X and Computer is O")
+
+while True:
+
+    display_board(board)
+
+    position = int(input("Enter position (1-9): ")) - 1
+
+    if position < 0 or position > 8 or board[position] != " ":
+        print("Invalid position! Try again.")
+        continue
+
+    board[position] = "X"
+
+    result = winner(board)
+
+    if result is not None:
+        break
+
+    computer_move = best_move(board)
+    board[computer_move] = "O"
+
+    print("Computer selected position:", computer_move + 1)
+
+    result = winner(board)
+
+    if result is not None:
+        break
+
+
+display_board(board)
+
+if result == "X":
+    print("You Win!")
+
+elif result == "O":
+    print("Computer Wins!")
+
+else:
+    print("Game Draw!")
+
+
+
+
+
+
